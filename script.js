@@ -28,6 +28,8 @@ const SMOOTHING = 0.34;
 const HYSTERESIS = 4;
 const LANE_HUES = [278, 132, 211, 28];
 const LANE_NAMES = ["Morado", "Verde", "Azul", "Naranja"];
+const IS_APPLE_MOBILE = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const SONGS = {
   "do-for-love": {
@@ -116,6 +118,8 @@ let lastMotionAnalysis = 0;
 let motionStrength = 0;
 const particles = [];
 let lastSustainTrigger = 0;
+let handProcessingAvailable = true;
+let motionProcessingAvailable = true;
 
 function setStatus(message, error = false) {
   statusText.textContent = message;
@@ -209,7 +213,7 @@ async function createHandDetector() {
   });
 
   try {
-    handLandmarker = await HandLandmarker.createFromOptions(vision, options("GPU"));
+    handLandmarker = await HandLandmarker.createFromOptions(vision, options(IS_APPLE_MOBILE ? "CPU" : "GPU"));
   } catch (gpuError) {
     console.warn("MediaPipe GPU no disponible; se utilizará CPU.", gpuError);
     handLandmarker = await HandLandmarker.createFromOptions(vision, options("CPU"));
@@ -554,10 +558,19 @@ function handLoop() {
   if (!running) return;
   const now = performance.now();
   drawHandView();
-  if (camera.currentTime !== lastVideoTime && now - lastHandInference >= 48) {
+  if (handProcessingAvailable && camera.currentTime !== lastVideoTime && now - lastHandInference >= (IS_APPLE_MOBILE ? 80 : 48)) {
     lastVideoTime = camera.currentTime;
     lastHandInference = now;
-    const result = handLandmarker.detectForVideo(camera, now);
+    let result;
+    try {
+      result = handLandmarker.detectForVideo(camera, now);
+    } catch (error) {
+      console.error("MediaPipe se detuvo durante el análisis.", error);
+      handProcessingAvailable = false;
+      setStatus("La cámara está activa, pero MediaPipe no pudo procesar este dispositivo.", true);
+      requestAnimationFrame(handLoop);
+      return;
+    }
     const orderedHands = [...(result.landmarks || [])].filter(isPlausibleHand).sort(
       (a, b) => calculateIndependentPalm(a).x - calculateIndependentPalm(b).x,
     );
@@ -608,9 +621,15 @@ function handLoop() {
 
 function experienceLoop(now) {
   if (!running) return;
-  if (now - lastMotionAnalysis >= 180) {
+  if (motionProcessingAvailable && now - lastMotionAnalysis >= (IS_APPLE_MOBILE ? 240 : 180)) {
     lastMotionAnalysis = now;
-    analyzeMotion();
+    try {
+      analyzeMotion();
+    } catch (error) {
+      console.error("OpenCV se detuvo durante el análisis.", error);
+      motionProcessingAvailable = false;
+      setStatus("La cámara está activa, pero OpenCV no pudo procesar este dispositivo.", true);
+    }
   }
   drawMusicView(now);
   requestAnimationFrame(experienceLoop);
@@ -624,12 +643,12 @@ async function startExperience() {
     setStatus("Solicitando cámara y preparando la experiencia…");
     await startCamera();
     resizeDisplay();
-    await Promise.all([
-      handLandmarker ? Promise.resolve() : createHandDetector(),
-      cvApi ? Promise.resolve() : initializeOpenCV(),
-      loadMap(selectedSongId),
-    ]);
+    await loadMap(selectedSongId);
+    if (!handLandmarker) await createHandDetector();
+    if (!cvApi) await initializeOpenCV();
     await audioReady;
+    handProcessingAvailable = true;
+    motionProcessingAvailable = true;
     running = true;
     startButton.textContent = "Experiencia activa";
     if (soundEnabled) await currentSong().audio.play();
