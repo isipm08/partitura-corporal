@@ -196,10 +196,10 @@ async function createHandDetector() {
   setStatus("Cargando MediaPipe…");
   const { FilesetResolver, HandLandmarker } = await import("./vendor/mediapipe/vision_bundle.mjs");
   const vision = await FilesetResolver.forVisionTasks("./vendor/mediapipe/wasm");
-  handLandmarker = await HandLandmarker.createFromOptions(vision, {
+  const options = (delegate) => ({
     baseOptions: {
       modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-      delegate: "GPU",
+      delegate,
     },
     runningMode: "VIDEO",
     numHands: 2,
@@ -207,6 +207,35 @@ async function createHandDetector() {
     minHandPresenceConfidence: 0.36,
     minTrackingConfidence: 0.25,
   });
+
+  try {
+    handLandmarker = await HandLandmarker.createFromOptions(vision, options("GPU"));
+  } catch (gpuError) {
+    console.warn("MediaPipe GPU no disponible; se utilizará CPU.", gpuError);
+    handLandmarker = await HandLandmarker.createFromOptions(vision, options("CPU"));
+  }
+}
+
+async function startCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error("CAMERA_UNAVAILABLE");
+
+  camera.setAttribute("playsinline", "");
+  camera.muted = true;
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 360 } },
+      audio: false,
+    });
+  } catch (error) {
+    if (error.name === "NotAllowedError" || error.name === "SecurityError") throw error;
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false,
+    });
+  }
+
+  camera.srcObject = cameraStream;
+  await camera.play();
 }
 
 function resizeDisplay() {
@@ -593,12 +622,7 @@ async function startExperience() {
     // Se crea dentro del clic para cumplir las restricciones de audio de móviles.
     const audioReady = prepareAudioGraph();
     setStatus("Solicitando cámara y preparando la experiencia…");
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 360 } },
-      audio: false,
-    });
-    camera.srcObject = cameraStream;
-    await camera.play();
+    await startCamera();
     resizeDisplay();
     await Promise.all([
       handLandmarker ? Promise.resolve() : createHandDetector(),
@@ -614,7 +638,15 @@ async function startExperience() {
     requestAnimationFrame(experienceLoop);
   } catch (error) {
     console.error(error);
-    setStatus("No se pudo iniciar. Revisa la cámara, el servidor local y la conexión.", true);
+    cameraStream?.getTracks().forEach((track) => track.stop());
+    cameraStream = null;
+    if (error.name === "NotAllowedError" || error.name === "SecurityError") {
+      setStatus("Safari bloqueó la cámara. Abre el enlace directamente en Safari y permite Cámara en sus ajustes.", true);
+    } else if (error.message === "CAMERA_UNAVAILABLE") {
+      setStatus("Este navegador no permite usar la cámara. Abre la página directamente en Safari.", true);
+    } else {
+      setStatus(`La cámara abrió, pero falló la preparación visual: ${error.message || "error desconocido"}.`, true);
+    }
     startButton.disabled = false;
   }
 }

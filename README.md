@@ -78,7 +78,7 @@ Desde Visual Studio Code:
 4. Entrar a la dirección local indicada por Live Server.
 5. Autorizar la cámara y presionar **Activar cámara**.
 
-La versión pública deberá utilizar HTTPS para que cualquier persona pueda autorizar su cámara desde el navegador.
+La versión pública utiliza HTTPS para que cualquier persona pueda autorizar su cámara desde el navegador. En iPad se recomienda abrir el enlace directamente en Safari, no dentro del navegador incorporado de WhatsApp, Instagram u otra aplicación. El inicio reintenta la cámara sin dimensiones fijas si iPadOS rechaza la configuración preferida, y MediaPipe cambia automáticamente de GPU a CPU cuando la aceleración gráfica no está disponible.
 
 ## Archivos principales
 
