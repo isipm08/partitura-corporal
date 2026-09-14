@@ -32,6 +32,8 @@ La posición correcta de la palma activa el evento. OpenCV modula su intensidad,
 
 La canción seleccionada se reproduce completa y continuamente. Cuando no existe una activación, permanece como una guía sonora de volumen bajo. Al colocar una mano en la zona correcta, el volumen aumenta suavemente según la energía del movimiento.
 
+El volumen se controla mediante **Web Audio API**. Cada canción pasa por un nodo `GainNode`, en lugar de depender solamente de la propiedad `volume` del elemento de audio. Esto permite que la diferencia entre guía sonora y activación corporal también funcione en navegadores móviles que limitan el control directo de volumen, especialmente Safari en iPhone.
+
 La versión actual incluye:
 
 - Do For Love

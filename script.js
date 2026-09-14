@@ -78,8 +78,11 @@ for (const song of Object.values(SONGS)) {
   song.audio.loop = true;
   // La pista completa queda apenas audible: funciona como guía temporal.
   song.audio.volume = song.idleVolume;
+  song.sourceNode = null;
+  song.gainNode = null;
 }
 
+let audioContext = null;
 let selectedSongId = "beat-it";
 let notes = [];
 let running = false;
@@ -127,6 +130,35 @@ function currentSongTime() {
   return currentSong().audio.currentTime;
 }
 
+function prepareAudioGraph() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return Promise.resolve();
+
+  if (!audioContext) {
+    audioContext = new AudioContextClass();
+    for (const song of Object.values(SONGS)) {
+      song.sourceNode = audioContext.createMediaElementSource(song.audio);
+      song.gainNode = audioContext.createGain();
+      song.gainNode.gain.value = song.idleVolume;
+      song.sourceNode.connect(song.gainNode);
+      song.gainNode.connect(audioContext.destination);
+      // El volumen dinámico lo controla GainNode, incluso en Safari móvil.
+      song.audio.volume = 1;
+    }
+  }
+
+  return audioContext.state === "suspended" ? audioContext.resume() : Promise.resolve();
+}
+
+function setSongVolume(song, targetVolume) {
+  if (song.gainNode && audioContext) {
+    song.gainNode.gain.setTargetAtTime(targetVolume, audioContext.currentTime, 0.08);
+    return;
+  }
+  // Respaldo para navegadores sin Web Audio API.
+  song.audio.volume += (targetVolume - song.audio.volume) * 0.09;
+}
+
 async function loadMap(songId) {
   const response = await fetch(SONGS[songId].mapPath);
   if (!response.ok) throw new Error(`No se pudo cargar ${SONGS[songId].mapPath}`);
@@ -153,7 +185,11 @@ async function selectSong(songId, restart = true) {
   if (restart) song.audio.currentTime = 0;
   trackValue.textContent = song.title;
   songButtons.forEach((button) => button.classList.toggle("active", button.dataset.song === songId));
-  if (running && soundEnabled) await song.audio.play();
+  if (running && soundEnabled) {
+    await prepareAudioGraph();
+    setSongVolume(song, song.idleVolume);
+    await song.audio.play();
+  }
 }
 
 async function createHandDetector() {
@@ -463,8 +499,7 @@ function drawMusicView(now) {
     }
   }
 
-  const songAudio = currentSong().audio;
-  songAudio.volume += (targetSongVolume - songAudio.volume) * 0.09;
+  setSongVolume(currentSong(), targetSongVolume);
 
   for (let index = particles.length - 1; index >= 0; index -= 1) {
     const particle = particles[index];
@@ -555,6 +590,8 @@ function experienceLoop(now) {
 async function startExperience() {
   startButton.disabled = true;
   try {
+    // Se crea dentro del clic para cumplir las restricciones de audio de móviles.
+    const audioReady = prepareAudioGraph();
     setStatus("Solicitando cámara y preparando la experiencia…");
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 360 } },
@@ -568,6 +605,7 @@ async function startExperience() {
       cvApi ? Promise.resolve() : initializeOpenCV(),
       loadMap(selectedSongId),
     ]);
+    await audioReady;
     running = true;
     startButton.textContent = "Experiencia activa";
     if (soundEnabled) await currentSong().audio.play();
@@ -586,7 +624,9 @@ soundButton.addEventListener("click", () => {
   soundEnabled = !soundEnabled;
   soundButton.textContent = `Sonido: ${soundEnabled ? "encendido" : "apagado"}`;
   soundButton.setAttribute("aria-pressed", String(soundEnabled));
-  if (soundEnabled && running) currentSong().audio.play();
+  if (soundEnabled && running) {
+    prepareAudioGraph().then(() => currentSong().audio.play());
+  }
   else Object.values(SONGS).forEach((song) => song.audio.pause());
 });
 songButtons.forEach((button) => button.addEventListener("click", () => selectSong(button.dataset.song, true)));
