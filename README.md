@@ -32,7 +32,9 @@ La posición correcta de la palma activa el evento. OpenCV modula su intensidad,
 
 En **iPhone y iPad**, la página debe abrirse directamente en **Safari**. Durante las pruebas, la cámara y el procesamiento visual funcionaron correctamente allí, mientras que otros navegadores y los navegadores internos de aplicaciones no ejecutaron toda la experiencia de forma confiable.
 
-No se recomienda abrir el enlace dentro de WhatsApp, Instagram, Gmail u otra aplicación. Se debe copiar el enlace, abrir Safari, autorizar la cámara y mantener la pestaña visible durante la interacción. En computadores puede utilizarse un navegador actualizado como Chrome, Edge, Firefox o Safari.
+En **Android**, la cámara, MediaPipe, OpenCV y el sonido también fueron probados y funcionan desde un navegador actualizado.
+
+No se recomienda abrir el enlace dentro de WhatsApp, Instagram, Gmail u otra aplicación. En iPhone o iPad se debe copiar el enlace, abrir Safari, autorizar la cámara y mantener la pestaña visible durante la interacción. En Android y computadores puede utilizarse un navegador actualizado compatible con acceso a cámara.
 
 ## Sonido y canciones
 
