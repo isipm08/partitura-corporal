@@ -28,6 +28,12 @@ El recorrido tarda 1,8 segundos en llegar a la línea de activación y los cambi
 
 La posición correcta de la palma activa el evento. OpenCV modula su intensidad, pero un movimiento suave no bloquea la activación.
 
+## Compatibilidad con dispositivos móviles
+
+En **iPhone y iPad**, la página debe abrirse directamente en **Safari**. Durante las pruebas, la cámara y el procesamiento visual funcionaron correctamente allí, mientras que otros navegadores y los navegadores internos de aplicaciones no ejecutaron toda la experiencia de forma confiable.
+
+No se recomienda abrir el enlace dentro de WhatsApp, Instagram, Gmail u otra aplicación. Se debe copiar el enlace, abrir Safari, autorizar la cámara y mantener la pestaña visible durante la interacción. En computadores puede utilizarse un navegador actualizado como Chrome, Edge, Firefox o Safari.
+
 ## Sonido y canciones
 
 La canción seleccionada se reproduce completa y continuamente. Cuando no existe una activación, permanece como una guía sonora de volumen bajo. Al colocar una mano en la zona correcta, el volumen aumenta suavemente según la energía del movimiento.
