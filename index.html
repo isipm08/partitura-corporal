@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Partitura corporal — Instalación audiovisual</title>
+    <style>
+      /* Respaldo visual para servidores que no cargan la hoja externa. */
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: #171717; color: #ecece7; font-family: Arial, sans-serif; }
+      .app { width: min(1500px, calc(100% - 40px)); margin: auto; padding: 34px 0 64px; }
+      .intro, .panel { border: 1px solid #555; background: #111; }
+      .intro { margin-bottom: 18px; padding: 22px 24px; border-radius: 14px; }
+      h1 { margin: 8px 0; font-size: clamp(2.5rem, 5vw, 5rem); line-height: .9; text-transform: uppercase; }
+      .eyebrow, .label { color: #bbb; font: 700 .75rem monospace; letter-spacing: .15em; text-transform: uppercase; }
+      .controls, .difficulty { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+      button { border: 1px solid #eee; border-radius: 999px; padding: 11px 16px; background: #eee; color: #080808; font: 700 .78rem "Lucida Console", "Courier New", monospace; cursor: pointer; }
+      button.secondary, .song-button { background: #111; color: #eee; border-color: #777; }
+      .song-button.active { background: #eee; color: #080808; }
+      .panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
+      .panel { min-width: 0; padding: 18px; }
+      .panel:first-child { border-radius: 14px 0 0 14px; }
+      .panel:last-child { border-radius: 0 14px 14px 0; }
+      .panel-heading { display: flex; align-items: center; justify-content: space-between; }
+      .panel h2 { margin: 4px 0; text-transform: uppercase; }
+      .badge { border: 1px solid #777; padding: 6px 9px; font: 700 .7rem monospace; }
+      .viewport { position: relative; overflow: hidden; aspect-ratio: 4 / 3; margin-top: 14px; background: #000; }
+      video, canvas { width: 100%; height: 100%; }
+      video { object-fit: cover; transform: scaleX(-1); }
+      canvas { object-fit: fill; }
+      .panel-mediapipe video { opacity: 0; }
+      #mediapipeCanvas { position: absolute; inset: 0; }
+      .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: 10px; }
+      .meters span { display: flex; justify-content: space-between; padding: 9px; background: #080808; color: #999; }
+      .meters strong { color: #eee; }
+      @media (max-width: 900px) { .panels { grid-template-columns: 1fr; gap: 14px; } .panel:first-child, .panel:last-child { border-radius: 12px; } }
+    </style>
+  <link rel="stylesheet" href="./style.css?v=89" />
+  </head>
+<body>
+    <div class="retro-cat-banner" aria-hidden="true"></div>
+    <main class="app">
+      <header class="intro">
+        <p class="eyebrow">Instalación audiovisual interactiva</p>
+        <h1>Partitura corporal</h1>
+        <p>
+          La canción permanece incompleta hasta que el cuerpo activa sus
+          fragmentos. Posición, movimiento, luz y sonido construyen la experiencia.
+        </p>
+        <div class="controls">
+          <button id="startButton" type="button">Activar cámara</button>
+          <button id="soundButton" class="secondary" type="button" aria-pressed="true">Sonido: encendido</button>
+        </div>
+        <div class="difficulty" aria-label="Selección de canción">
+          <span>Canción</span>
+          <button class="song-button" data-song="do-for-love" type="button">Do For Love</button>
+          <button class="song-button active" data-song="beat-it" type="button">Beat It</button>
+          <button class="song-button" data-song="never-say-never" type="button">Never Say Never</button>
+          <button class="song-button" data-song="back-in-black" type="button">Back in Black</button>
+        </div>
+        <p id="status" class="status" role="status">La cámara está detenida.</p>
+      </header>
+
+      <div class="music-transition" aria-label="Animación pixelada de símbolos musicales">
+        <img src="./assets/images/animacion.gif" alt="Símbolos musicales pixelados en movimiento" />
+      </div>
+
+      <section class="panels" aria-label="Comparación de tecnologías">
+        <article class="panel panel-mediapipe">
+          <div class="panel-heading">
+            <div>
+              <p class="label">Lectura 01</p>
+              <h2>MediaPipe</h2>
+            </div>
+            <span class="badge">Reconoce el cuerpo</span>
+          </div>
+          <div class="viewport">
+            <video id="camera" autoplay playsinline muted></video>
+            <canvas id="mediapipeCanvas"></canvas>
+          </div>
+          <div class="meters" aria-label="Datos producidos por MediaPipe">
+            <span>Posición de palma <strong id="toneValue">—</strong></span>
+            <span>Velocidad corporal <strong id="volumeValue">0%</strong></span>
+            <span>Zona de la palma <strong id="handValue">—</strong></span>
+          </div>
+          <p>MediaPipe reconoce hasta dos manos y ubica el centro de cada palma dentro de una de las cuatro zonas.</p>
+        </article>
+
+        <article class="panel panel-opencv">
+          <div class="panel-heading">
+            <div>
+              <p class="label">Lectura 02</p>
+              <h2>OpenCV.js</h2>
+            </div>
+            <span class="badge">Percibe movimiento</span>
+          </div>
+          <div class="viewport canvas-placeholder">
+            <canvas id="opencvCanvas"></canvas>
+            <p id="opencvPlaceholder">Aquí aparecerán cuatro zonas de interacción.</p>
+          </div>
+          <div class="meters" aria-label="Datos aplicados a OpenCV">
+            <span>Eventos visibles <strong id="particleValue">0</strong></span>
+            <span>Movimiento <strong id="movementValue">0%</strong></span>
+            <span>Sincronización <strong id="syncValue">0 ms</strong></span>
+            <span>Pista base <strong id="trackValue">Beat It</strong></span>
+          </div>
+          <p>OpenCV mide la intensidad del movimiento. JavaScript combina esa energía con la zona ocupada por la palma para modificar el sonido, el brillo y el recorrido visual.</p>
+        </article>
+      </section>
+
+      <div class="retro-cat" aria-label="Gato pixelado animado">
+        <img src="./assets/images/gatoanimacion.gif" alt="Gato pixelado bailando" />
+      </div>
+
+      <section class="semiotic-reflection" aria-labelledby="reflectionTitle">
+        <p class="label">Reflexión semiótica</p>
+        <h2 id="reflectionTitle">Dos máquinas miran el mismo cuerpo de maneras diferentes</h2>
+        <div class="reflection-grid">
+          <article>
+            <span>01 / MEDIAPIPE</span>
+            <h3>Reconoce</h3>
+            <p>Interpreta una estructura conocida: identifica las manos, sus articulaciones y el centro de cada palma. Convierte el cuerpo en posiciones que pueden activar una zona.</p>
+          </article>
+          <article>
+            <span>02 / OPENCV.JS</span>
+            <h3>Percibe</h3>
+            <p>No sabe si observa una mano, una persona o un objeto. Compara imágenes y registra cuánto cambia la escena. Esa energía modifica la intensidad visual, el brillo y la fuerza del sonido.</p>
+          </article>
+        </div>
+        <p class="reflection-conclusion">Ambas imágenes son huellas del mismo gesto, pero ninguna es el cuerpo mismo. La interfaz construye una relación simbólica entre posición, movimiento, color y sonido.</p>
+        <blockquote>¿Qué queda del cuerpo cuando una máquina lo transforma en posición, movimiento, luz y sonido?</blockquote>
+      </section>
+
+    </main>
+
+    <script type="module" src="script.js?v=73"></script>
+  </body>
+</html>
