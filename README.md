@@ -1,5 +1,7 @@
 # Partitura corporal
 
+![titulo](./imagenes/animacion.gif)
+
 Ejercicio 02 del curso DPPI 2026, sobre visión artificial, cuerpo, movimiento y representación. La propuesta utiliza una sola cámara para construir dos maneras distintas de percibir el mismo gesto y convertirlo en una experiencia sonora y visual.
 
 ## De qué se trata
